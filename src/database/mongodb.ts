@@ -13,6 +13,10 @@ import { Callback } from '../model/callback';
 import { StatusError } from '../error';
 import { Plan } from '../model/plan';
 import { Bill } from '../model/bill';
+import {
+    removeBootstrapCustomerBearer,
+    writeBootstrapCustomerBearer,
+} from '../security/bootstrapSecret';
 
 /**
  * Asserts that the provided matcher object contains only safe primitive values.
@@ -76,8 +80,24 @@ export class MongoDB extends AbstractDatabase {
             const nbCustomers = await this.countCustomers();
             if (nbCustomers === 0) {
                 console.log('No customer found in database, creating default customer.');
-                const bearer = (await Customer.createDefault()).bearer;
-                console.log(`Default customer created. Bearer is "${bearer}". Keep it safe, it will not be displayed again.`);
+                const bearer = utils.generate_bearer(utils.BearerType.CUSTOMER_API);
+                const bearerFile = writeBootstrapCustomerBearer(bearer);
+                try {
+                    await Customer.createDefault(bearer);
+                } catch (err) {
+                    if (bearerFile) {
+                        removeBootstrapCustomerBearer(bearerFile);
+                    }
+                    throw err;
+                }
+                if (bearerFile) {
+                    console.log('Default customer created. Bootstrap bearer written to the configured file.');
+                } else {
+                    console.warn(
+                        `Debug-only bootstrap bearer: "${bearer}". `
+                        + 'Configure BOOTSTRAP_CUSTOMER_BEARER_FILE outside debug mode.',
+                    );
+                }
             }
         } catch (err) {
             if (throwOnError) {

@@ -1,0 +1,84 @@
+services:
+  invoice-collector:
+    build:
+      context: .
+      target: prod
+      args:
+        BUILD_ENV: production
+    image: invoice-collector:42-main-local
+    init: true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      ENV: prod
+      IS_SELF_HOSTED: "true"
+      PORT: "8080"
+      FRONTEND: ${INVOICE_COLLECTOR_FRONTEND_URL:?set INVOICE_COLLECTOR_FRONTEND_URL}
+      DATABASE_URI: mongodb://mongodb:27017
+      DATABASE_MONGODB_NAME: ${INVOICE_COLLECTOR_MONGODB_NAME:-invoice_collector}
+      SECRET_MANAGER_TYPE: openbao
+      SECRET_MANAGER_OPENBAO_ADDR: ${INVOICE_COLLECTOR_OPENBAO_ADDR:?set INVOICE_COLLECTOR_OPENBAO_ADDR}
+      SECRET_MANAGER_OPENBAO_TOKEN_FILE: /run/secrets/openbao-token
+      SECRET_MANAGER_OPENBAO_KV_MOUNT: ${INVOICE_COLLECTOR_OPENBAO_KV_MOUNT:-secret}
+      SECRET_MANAGER_OPENBAO_PREFIX: ${INVOICE_COLLECTOR_OPENBAO_PREFIX:-invoice-collector}
+      SECRET_MANAGER_OPENBAO_NAMESPACE: ${INVOICE_COLLECTOR_OPENBAO_NAMESPACE:-}
+      BOOTSTRAP_CUSTOMER_BEARER_FILE: /run/invoice-collector/customer-bearer
+      HOME: /tmp/invoice-collector-home
+    ports:
+      - "127.0.0.1:${INVOICE_COLLECTOR_BIND_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ${INVOICE_COLLECTOR_OPENBAO_TOKEN_FILE:?set INVOICE_COLLECTOR_OPENBAO_TOKEN_FILE}
+        target: /run/secrets/openbao-token
+        read_only: true
+      - type: bind
+        source: ${INVOICE_COLLECTOR_RUNTIME_DIR:?set INVOICE_COLLECTOR_RUNTIME_DIR}
+        target: /run/invoice-collector
+      - invoice-collector-media:/usr/app/media
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    shm_size: 1gb
+    networks:
+      - collector-egress
+      - collector-data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:8080/api/v1/ping',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+
+  mongodb:
+    image: mongo:8.0.3
+    command: --logpath /dev/null
+    volumes:
+      - invoice-collector-mongodb:/data/db
+    networks:
+      - collector-data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  invoice-collector-media:
+  invoice-collector-mongodb:
+
+networks:
+  collector-egress:
+  collector-data:
+    internal: true

@@ -55,6 +55,24 @@ parameter. When set, callbacks include `Authorization: Bearer <token>`. The
 token is stored by the configured secret manager and is never included in the
 callback URL or success logs.
 
+`docker-compose.openbao.yml` is a hardened, loopback-only deployment starting
+point for this branch. Copy `.env.openbao.example` to an untracked environment
+file, create the token file with mode `0600`, and create the runtime directory
+for container uid/gid `1000` with mode `0700`. Validate the rendered Compose
+model before starting it:
+
+```bash
+docker compose --env-file .env.openbao -f docker-compose.openbao.yml config
+docker compose --env-file .env.openbao -f docker-compose.openbao.yml up -d --build
+```
+
+On the first database initialization, the production API bearer is written
+once to `runtime/customer-bearer` with mode `0600`; production startup refuses
+to print it. Import it into the workload secret store, verify API access, then
+remove the bootstrap file. The included MongoDB service is reachable only on
+the internal Compose network, and the API binds only to host loopback. Add a
+separately authenticated private reverse proxy for remote administration.
+
 3. Build and run the container
 
 ```bash

@@ -130,9 +130,10 @@ export class Customer {
      * Creates a default customer instance with pre-defined values.
      * @returns An object containing the generated bearer token and the created customer instance.
      */
-    static async createDefault(): Promise<{bearer: string, customer: Customer}> {
+    static async createDefault(
+        bearer: string = utils.generate_bearer(utils.BearerType.CUSTOMER_API),
+    ): Promise<{bearer: string, customer: Customer}> {
         // Generate default api bearer
-        const bearer = utils.generate_bearer(utils.BearerType.CUSTOMER_API);
         const customer = new Customer(
             Customer.DEFAULT_EMAIL,
             Customer.DEFAULT_PASSWORD,

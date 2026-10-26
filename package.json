@@ -13,7 +13,7 @@
     "test.cicd.collectors": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit test/cicd/collectors.spec.ts",
     "test.cicd.openapi": "node devscripts/build_openapi.js && swagger-cli validate views/openapi/openapi.yml",
     "test.cicd.compilation": "tsc --noEmit",
-    "test.unit.security": "jest test/openbaoSecretManager.spec.ts test/httpIntegration.spec.ts --runInBand --forceExit",
+    "test.unit.security": "jest test/openbaoSecretManager.spec.ts test/httpIntegration.spec.ts test/bootstrapSecret.spec.ts --runInBand --forceExit",
     "build.openapi": "node devscripts/build_openapi.js",
     "debug": "nodemon --inspect=0.0.0.0:9229 --signal SIGINT --nolazy -L src/index.ts"
   },
