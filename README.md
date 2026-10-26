@@ -32,6 +32,29 @@ curl https://raw.githubusercontent.com/invoice-collector/invoice-collector/refs/
 
 2. Edit the `docker-compose.yml` and set the values for the env variables.
 
+For self-hosted deployments, `SECRET_MANAGER_TYPE=openbao` is also supported.
+Use a KV v2 mount and provide the OpenBao token through a runtime-only file:
+
+```dotenv
+SECRET_MANAGER_TYPE=openbao
+SECRET_MANAGER_OPENBAO_ADDR=https://openbao.example.internal
+SECRET_MANAGER_OPENBAO_TOKEN_FILE=/run/secrets/openbao-token
+SECRET_MANAGER_OPENBAO_KV_MOUNT=secret
+SECRET_MANAGER_OPENBAO_PREFIX=invoice-collector
+SECRET_MANAGER_OPENBAO_NAMESPACE=
+```
+
+The token file must be a regular non-linked file and mode `0600` on POSIX.
+Plain HTTP is accepted only for loopback development endpoints. The OpenBao
+client disables redirects and environment proxies. A minimal KV v2 policy needs
+create/read/update access to `secret/data/invoice-collector/*` and delete access
+to `secret/metadata/invoice-collector/*`.
+
+The HTTP callback integration accepts an optional `authorization_bearer`
+parameter. When set, callbacks include `Authorization: Bearer <token>`. The
+token is stored by the configured secret manager and is never included in the
+callback URL or success logs.
+
 3. Build and run the container
 
 ```bash

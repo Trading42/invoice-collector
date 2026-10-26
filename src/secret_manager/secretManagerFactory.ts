@@ -28,6 +28,10 @@ export class SecretManagerFactory {
                     const { BitwardenSecretManager } = await import('./bitwardenSecretManager');
                     SecretManagerFactory.instance = new BitwardenSecretManager();
                     break;
+                case 'openbao':
+                    const { OpenBaoSecretManager } = await import('./openbaoSecretManager');
+                    SecretManagerFactory.instance = new OpenBaoSecretManager();
+                    break;
                 case 'mock':
                     const { MockSecretManager } = await import('./mockSecretManager');
                     SecretManagerFactory.instance = new MockSecretManager();

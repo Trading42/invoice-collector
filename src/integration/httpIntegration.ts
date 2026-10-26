@@ -18,6 +18,12 @@ export class HttpIntegration extends AbstractIntegration {
                 placeholder: 'The URL to send the invoice data.',
                 mandatory: true,
             },
+            authorization_bearer: {
+                type: 'password',
+                name: 'Authorization Bearer',
+                placeholder: 'Optional Bearer token sent in the Authorization header.',
+                mandatory: false,
+            },
         },
     };
     static DEFAULT_RETRIES: number = 3;
@@ -40,6 +46,7 @@ export class HttpIntegration extends AbstractIntegration {
     private async sendRequest(
         url: string,
         data: object,
+        authorizationBearer?: string,
         maxRetries: number = HttpIntegration.DEFAULT_RETRIES,
     ): Promise<void> {
         // Block requests to internal/private/cloud-metadata addresses (SSRF)
@@ -49,7 +56,15 @@ export class HttpIntegration extends AbstractIntegration {
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const response = await axios.post(url, data, { maxRedirects: 0 });
+                const headers = authorizationBearer
+                    ? { Authorization: `Bearer ${authorizationBearer}` }
+                    : undefined;
+                const response = await axios.post(url, data, {
+                    headers,
+                    maxRedirects: 0,
+                    proxy: false,
+                    timeout: 30000,
+                });
                 
                 // Check if response is successful
                 if (response.status !== 200) {
@@ -102,8 +117,9 @@ export class HttpIntegration extends AbstractIntegration {
                     data: invoice.data,
                 },
             },
+            secretParams.authorization_bearer.value,
         );
-        console.log(`Callback ${secretParams.url.value} successfully reached, invoice sent`);
+        console.log('Callback successfully reached, invoice sent');
     }
 
     /**
@@ -125,7 +141,8 @@ export class HttpIntegration extends AbstractIntegration {
                 user_id,
                 remote_id,
             },
+            secretParams.authorization_bearer.value,
         );
-        console.log(`Callback ${secretParams.url.value} successfully reached, disconnected notification sent for credential ${credential_id}`);
+        console.log(`Callback successfully reached, disconnected notification sent for credential ${credential_id}`);
     }
 }
